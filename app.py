@@ -111,11 +111,19 @@ def cargue_masivo():
                 if resumen['errores'] > 0:
                     partes.append(f"❌ {resumen['errores']} fila(s) con error")
 
+                total_rechazados = resumen['duplicados'] + resumen['errores']
+
                 resultado = {
-                    'tipo':          'exito' if resumen['insertados'] > 0 else 'error',
-                    'mensaje':       " — ".join(partes) if partes else "No se procesó ningún registro.",
-                    'detalle':       resumen['detalle_errores'],
-                    'hay_rechazados': hay_rechazados
+                    'tipo':           'exito' if resumen['insertados'] > 0 else 'error',
+                    'mensaje':        " — ".join(partes) if partes else "No se procesó ningún registro.",
+                    'detalle':        resumen['detalle_errores'],
+                    'hay_rechazados': hay_rechazados,
+                    'stats': {
+                        'insertados':  resumen['insertados'],
+                        'rechazados':  total_rechazados,
+                        'duplicados':  resumen['duplicados'],
+                        'total':       resumen['insertados'] + total_rechazados
+                    }
                 }
 
             except Exception as e:
@@ -134,35 +142,37 @@ def cargue_masivo():
 # ─── RUTA DESCARGA RECHAZADOS ─────────────────────────────────────────────────
 @app.route("/descargar_rechazados")
 def descargar_rechazados():
+    from openpyxl.styles import PatternFill, Font
+
     rechazados_json = session.get('rechazados', None)
 
     if not rechazados_json:
         return redirect("/carguemasivo")
 
-    df = pd.read_json(rechazados_json, orient='records')
+    df = pd.read_json(io.StringIO(rechazados_json), orient='records')
 
     # Generar Excel en memoria
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Rechazados')
 
-        # Formato: ajustar ancho de columnas
-        ws = writer.sheets['Rechazados']
-        for col in ws.columns:
-            max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 50)
+        ws        = writer.sheets['Rechazados']
+        red_fill  = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
+        bold_font = Font(bold=True)
 
-        # Encabezado rojo para la columna Motivo
-        from openpyxl.styles import PatternFill, Font
-        red_fill   = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
-        bold_font  = Font(bold=True)
-        header_row = ws[1]
-        for cell in header_row:
+        # Formato encabezados
+        for cell in ws[1]:
             cell.font = bold_font
-            if cell.value == "Motivo de rechazo":
+            if cell.value and "Motivo" in str(cell.value):
                 cell.fill = red_fill
 
+        # Ajustar ancho de columnas
+        for col in ws.columns:
+            max_len = max((len(str(cell.value)) if cell.value is not None else 0) for cell in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 55)
+
     output.seek(0)
+
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
