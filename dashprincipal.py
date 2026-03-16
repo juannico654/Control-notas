@@ -136,6 +136,11 @@ def creartablero(server):
 
         html.Br(),
 
+        # Alerta estudiantes en riesgo
+        html.Div(id='alerta_riesgo', style={'width': '90%', 'margin': 'auto'}),
+
+        html.Br(),
+
         # Tabla
         dcc.Loading(
             dash_table.DataTable(
@@ -161,7 +166,10 @@ def creartablero(server):
             dcc.Tab(label='Histograma',           children=[dcc.Graph(id='histograma')]),
             dcc.Tab(label='Dispersión',           children=[dcc.Graph(id='dispersion')]),
             dcc.Tab(label='Desempeño',            children=[dcc.Graph(id='pie')]),
-            dcc.Tab(label='Promedio por Carrera', children=[dcc.Graph(id='barras')])
+            dcc.Tab(label='Promedio por Carrera', children=[dcc.Graph(id='barras')]),
+            dcc.Tab(label='🏆 Ranking Top 10',    children=[
+                html.Div(id='ranking_container', style={'padding': '20px'})
+            ])
         ], style={'marginTop': '30px'})
 
     ], style={'padding': '20px', 'backgroundColor': '#f5f7fa', 'minHeight': '100vh'})
@@ -334,7 +342,177 @@ def creartablero(server):
         return fig
 
 
+    # ─── CALLBACK ALERTA RIESGO ──────────────────────────────────────────────
+    @appnotas.callback(
+        Output('alerta_riesgo', 'children'),
+        [
+            Input('filtro_carrera',  'value'),
+            Input('slider_edad',     'value'),
+            Input('slider_promedio', 'value')
+        ]
+    )
+    def actualizar_alerta_riesgo(carrera, rango_edad, rango_prom):
+        dataf = cargar_datos()
+
+        if dataf.empty:
+            return None
+
+        # Siempre buscar en TODOS los datos (ignorar filtros) para no ocultar riesgos
+        en_riesgo = (
+            dataf[dataf['Promedio'] < 3.0][['Nombre', 'Carrera', 'Promedio']]
+            .sort_values('Promedio')
+            .reset_index(drop=True)
+        )
+
+        if en_riesgo.empty:
+            return None
+
+        filas = []
+        for _, row in en_riesgo.iterrows():
+            filas.append(
+                html.Tr([
+                    html.Td(row['Nombre'],  style={'padding': '10px 16px', 'fontWeight': '600', 'color': '#333'}),
+                    html.Td(row['Carrera'], style={'padding': '10px 16px', 'color': '#555'}),
+                    html.Td(f"{row['Promedio']:.2f}", style={
+                        'padding': '10px 16px', 'textAlign': 'center',
+                        'fontWeight': '700', 'color': '#c0392b', 'fontSize': '15px'
+                    }),
+                ], style={'borderBottom': '1px solid #ffd5d5', 'backgroundColor': 'white'})
+            )
+
+        tabla_riesgo = html.Table([
+            html.Thead(
+                html.Tr([
+                    html.Th('Nombre',   style={**th_riesgo_style()}),
+                    html.Th('Carrera',  style={**th_riesgo_style()}),
+                    html.Th('Promedio', style={**th_riesgo_style(), 'textAlign': 'center'}),
+                ])
+            ),
+            html.Tbody(filas)
+        ], style={
+            'width': '100%',
+            'borderCollapse': 'collapse',
+            'borderRadius': '8px',
+            'overflow': 'hidden',
+            'marginTop': '12px'
+        })
+
+        return html.Div([
+            # Encabezado de alerta
+            html.Div([
+                html.Span("⚠️", style={'fontSize': '22px', 'marginRight': '10px'}),
+                html.Span(
+                    f"Alerta: {len(en_riesgo)} estudiante(s) en riesgo académico (promedio < 3.0)",
+                    style={'fontSize': '15px', 'fontWeight': '700', 'color': '#c0392b'}
+                )
+            ], style={
+                'backgroundColor': '#fff0f0',
+                'border': '1px solid #ffcccc',
+                'borderRadius': '8px 8px 0 0',
+                'padding': '14px 18px',
+                'display': 'flex',
+                'alignItems': 'center'
+            }),
+            # Tabla
+            html.Div(tabla_riesgo, style={
+                'border': '1px solid #ffcccc',
+                'borderTop': 'none',
+                'borderRadius': '0 0 8px 8px',
+                'overflow': 'hidden'
+            })
+        ], style={'marginBottom': '8px'})
+
+
+    # ─── CALLBACK RANKING ────────────────────────────────────────────────────
+    @appnotas.callback(
+        Output('ranking_container', 'children'),
+        Input('intervalo_refresco', 'n_intervals')
+    )
+    def actualizar_ranking(n):
+        dataf = cargar_datos()
+
+        if dataf.empty:
+            return html.P("No hay datos disponibles.", style={'color': '#999', 'textAlign': 'center'})
+
+        # Top 10 por promedio (todas las carreras)
+        top10 = (
+            dataf[['Nombre', 'Carrera', 'Promedio']]
+            .sort_values('Promedio', ascending=False)
+            .head(10)
+            .reset_index(drop=True)
+        )
+        top10.index += 1  # posición desde 1
+
+        medallas = {1: '🥇', 2: '🥈', 3: '🥉'}
+
+        filas = []
+        for pos, row in top10.iterrows():
+            icono = medallas.get(pos, f'{pos}°')
+            color_fondo = {1: '#fff8e1', 2: '#f5f5f5', 3: '#fbe9e7'}.get(pos, 'white')
+            filas.append(
+                html.Tr([
+                    html.Td(icono,               style={'textAlign': 'center', 'fontSize': '20px', 'padding': '12px 16px'}),
+                    html.Td(row['Nombre'],        style={'padding': '12px 16px', 'fontWeight': '600', 'color': '#333'}),
+                    html.Td(row['Carrera'],       style={'padding': '12px 16px', 'color': '#555'}),
+                    html.Td(f"{row['Promedio']:.2f}", style={
+                        'padding': '12px 16px', 'textAlign': 'center',
+                        'fontWeight': '700', 'fontSize': '16px', 'color': '#1E1BD2'
+                    }),
+                ], style={'backgroundColor': color_fondo, 'borderBottom': '1px solid #f0f0f0'})
+            )
+
+        tabla_ranking = html.Table([
+            html.Thead(
+                html.Tr([
+                    html.Th('#',        style=th_style()),
+                    html.Th('Nombre',   style=th_style()),
+                    html.Th('Carrera',  style=th_style()),
+                    html.Th('Promedio', style={**th_style(), 'textAlign': 'center'}),
+                ])
+            ),
+            html.Tbody(filas)
+        ], style={
+            'width': '100%',
+            'borderCollapse': 'collapse',
+            'borderRadius': '10px',
+            'overflow': 'hidden',
+            'boxShadow': '0 2px 12px rgba(0,0,0,0.07)'
+        })
+
+        return html.Div([
+            html.H3("🏆 Top 10 estudiantes con mayor promedio",
+                    style={'color': '#1E1BD2', 'marginBottom': '16px', 'fontSize': '18px'}),
+            html.P("Ranking entre todas las carreras registradas.",
+                   style={'color': '#888', 'fontSize': '13px', 'marginBottom': '20px'}),
+            tabla_ranking
+        ])
+
+
     return appnotas
+
+
+def th_riesgo_style():
+    return {
+        'backgroundColor': '#e74c3c',
+        'color': 'white',
+        'padding': '10px 16px',
+        'textAlign': 'left',
+        'fontSize': '12px',
+        'textTransform': 'uppercase',
+        'letterSpacing': '0.4px'
+    }
+
+
+def th_style():
+    return {
+        'backgroundColor': '#1E1BD2',
+        'color': 'white',
+        'padding': '12px 16px',
+        'textAlign': 'left',
+        'fontSize': '13px',
+        'textTransform': 'uppercase',
+        'letterSpacing': '0.4px'
+    }
 
 
 def navbar_link_style():
