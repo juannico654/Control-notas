@@ -151,6 +151,34 @@
         .btn-descarga  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
         .btn-descarga:hover { background: #d0edda; }
 
+        /* Tabla estadísticas */
+        .tabla-stats {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 14px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .tabla-stats th {
+            background: #1E1BD2;
+            color: white;
+            padding: 11px 16px;
+            text-align: left;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .tabla-stats td {
+            padding: 11px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .tabla-stats tr:last-child td { border-bottom: none; }
+        .fila-total      td { background: #f5f5f5; color: #333; }
+        .fila-insertados td { background: #f0fff4; color: #1e7e34; }
+        .fila-rechazados td { background: #fff0f0; color: #c0392b; }
+        .fila-duplicados td { background: #fffbf0; color: #e65100; }
+
         /* Formato esperado */
         .formato-card {
             background: #f7f8ff;
@@ -218,8 +246,38 @@
 
         <div class="alerta {{ resultado.tipo }}">{{ resultado.mensaje }}</div>
 
+        <!-- Tabla de estadísticas -->
+        {% if resultado.stats %}
+        <table class="tabla-stats">
+            <thead>
+                <tr>
+                    <th>Resultado</th>
+                    <th>Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="fila-total">
+                    <td>📄 Total procesados</td>
+                    <td><strong>{{ resultado.stats.total }}</strong></td>
+                </tr>
+                <tr class="fila-insertados">
+                    <td>✅ Insertados</td>
+                    <td><strong>{{ resultado.stats.insertados }}</strong></td>
+                </tr>
+                <tr class="fila-rechazados">
+                    <td>❌ Rechazados (errores)</td>
+                    <td><strong>{{ resultado.stats.rechazados }}</strong></td>
+                </tr>
+                <tr class="fila-duplicados">
+                    <td>⚠️ Duplicados omitidos</td>
+                    <td><strong>{{ resultado.stats.duplicados }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        {% endif %}
+
         {% if resultado.detalle %}
-        <p style="font-size:13px; color:#777; margin-bottom:6px;">Detalle de registros omitidos:</p>
+        <p style="font-size:13px; color:#777; margin: 16px 0 6px;">Detalle de registros omitidos:</p>
         <div class="detalle-lista">
             {% for linea in resultado.detalle %}
             <p>{{ linea }}</p>
