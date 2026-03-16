@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Estudiante</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #1E1BD2;
+            color: white;
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h2 { font-size: 18px; }
+        .navbar-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            opacity: 0.85;
+            transition: opacity 0.2s;
+        }
+        .navbar-links a:hover { opacity: 1; }
+
+        .container {
+            max-width: 600px;
+            margin: 48px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 40px 36px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            font-size: 22px;
+            color: #1E1BD2;
+            margin-bottom: 28px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group { margin-bottom: 18px; }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #333;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus { border-color: #1E1BD2; }
+
+        .notas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .btn-registrar {
+            width: 100%;
+            padding: 13px;
+            background: #1E1BD2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-registrar:hover  { background: #1815b0; }
+        .btn-registrar:active { transform: scale(0.98); }
+
+        .alerta {
+            padding: 13px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        .alerta.error {
+            background: #fff0f0;
+            border: 1px solid #ffcccc;
+            color: #c0392b;
+        }
+
+        .alerta.exito {
+            background: #f0fff4;
+            border: 1px solid #a3e4b7;
+            color: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h2>📊 Control de Notas</h2>
+        <div class="navbar-links">
+            {% if usuario %}
+                <a href="/dashprincipal/">📈 Tablero</a>
+                <a href="/carguemasivo">📂 Cargue masivo</a>
+            <a href="/logout">🚪 Salir ({{ usuario }})</a>
+            {% else %}
+                <a href="/">🔑 Iniciar sesión</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>➕ Registrar nuevo estudiante</h2>
+
+            {% if mensaje %}
+            <div class="alerta {{ tipo }}">{{ mensaje }}</div>
+            {% endif %}
+
+            <form method="POST" action="/registrar">
+
+                <div class="form-group">
+                    <label for="nombre">Nombre completo</label>
+                    <input type="text" id="nombre" name="nombre"
+                           placeholder="Ej: Juan Pérez" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edad">Edad</label>
+                    <input type="number" id="edad" name="edad"
+                           min="15" max="60" placeholder="Ej: 20" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="carrera">Carrera</label>
+                    <select id="carrera" name="carrera" required>
+                        <option value="" disabled selected>Selecciona una carrera</option>
+                        {% for c in carreras %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Notas (0.0 – 5.0)</label>
+                    <div class="notas-grid">
+                        <div>
+                            <input type="number" name="nota1" placeholder="Nota 1"
+                                   min="0" max="5" step="0.1" required>
+                            <p class="hint">Nota 1</p>
+                        </div>
+                        <div>
+                            <input type="number" name="nota2" placeholder="Nota 2"
+                                   min="0" max="5" step="0.1" required>
+                            <p class="hint">Nota 2</p>
+                        </div>
+                        <div>
+                            <input type="number" name="nota3" placeholder="Nota 3"
+                                   min="0" max="5" step="0.1" required>
+                            <p class="hint">Nota 3</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-registrar">Registrar estudiante</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

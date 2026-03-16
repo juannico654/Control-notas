@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargue Masivo — Control de Notas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #1E1BD2;
+            color: white;
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar h2 { font-size: 18px; }
+        .navbar-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            opacity: 0.85;
+            transition: opacity 0.2s;
+        }
+        .navbar-links a:hover { opacity: 1; }
+
+        .container {
+            max-width: 700px;
+            margin: 48px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 40px 36px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+
+        .card h2 {
+            font-size: 22px;
+            color: #1E1BD2;
+            margin-bottom: 8px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        /* Zona de subida */
+        .upload-zone {
+            border: 2px dashed #c0c8ff;
+            border-radius: 10px;
+            padding: 36px 20px;
+            text-align: center;
+            background: #f7f8ff;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-zone:hover { border-color: #1E1BD2; background: #eef0ff; }
+        .upload-zone input[type="file"] { display: none; }
+        .upload-zone label { cursor: pointer; display: block; }
+        .upload-icon  { font-size: 40px; margin-bottom: 10px; }
+        .upload-text  { font-size: 15px; color: #555; font-weight: 500; }
+        .upload-hint  { font-size: 12px; color: #aaa; margin-top: 6px; }
+        #nombre_archivo { margin-top: 10px; font-size: 13px; color: #1E1BD2; font-weight: 600; }
+
+        .btn-cargar {
+            width: 100%;
+            padding: 13px;
+            background: #1E1BD2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-cargar:hover  { background: #1815b0; }
+        .btn-cargar:active { transform: scale(0.98); }
+
+        /* Resultado */
+        .alerta {
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .alerta.exito { background: #f0fff4; border: 1px solid #a3e4b7; color: #1e7e34; }
+        .alerta.error { background: #fff0f0; border: 1px solid #ffcccc; color: #c0392b; }
+
+        /* Detalle de errores */
+        .detalle-lista {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .detalle-lista p {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+        .detalle-lista p:last-child { margin-bottom: 0; }
+
+        /* Botones de acción post-cargue */
+        .acciones {
+            display: flex;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+        }
+
+        .btn-accion {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: background 0.2s, transform 0.1s;
+            display: inline-block;
+        }
+        .btn-accion:active { transform: scale(0.97); }
+
+        .btn-tablero   { background: #1E1BD2; color: white; }
+        .btn-tablero:hover { background: #1815b0; }
+
+        .btn-descarga  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .btn-descarga:hover { background: #d0edda; }
+
+        /* Formato esperado */
+        .formato-card {
+            background: #f7f8ff;
+            border: 1px solid #dde0ff;
+            border-radius: 10px;
+            padding: 20px 24px;
+        }
+        .formato-card h3 { font-size: 15px; color: #1E1BD2; margin-bottom: 12px; }
+
+        table.formato {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        table.formato th {
+            background: #1E1BD2;
+            color: white;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        table.formato td {
+            padding: 7px 10px;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+        table.formato tr:last-child td { border-bottom: none; }
+        table.formato tr:nth-child(even) td { background: #f0f2ff; }
+
+        /* Reglas de validación */
+        .reglas {
+            margin-top: 16px;
+            padding: 14px 18px;
+            background: #fffbf0;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.8;
+        }
+        .reglas strong { color: #333; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <h2>📊 Control de Notas</h2>
+    <div class="navbar-links">
+        {% if usuario %}
+            <a href="/dashprincipal/">📈 Tablero</a>
+            <a href="/registrar">➕ Registrar</a>
+            <a href="/carguemasivo">📂 Cargue masivo</a>
+            <a href="/logout">🚪 Salir ({{ usuario }})</a>
+        {% else %}
+            <a href="/">🔑 Iniciar sesión</a>
+        {% endif %}
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- Resultado del cargue -->
+    {% if resultado %}
+    <div class="card">
+        <h2>📋 Resultado del cargue</h2>
+
+        <div class="alerta {{ resultado.tipo }}">{{ resultado.mensaje }}</div>
+
+        {% if resultado.detalle %}
+        <p style="font-size:13px; color:#777; margin-bottom:6px;">Detalle de registros omitidos:</p>
+        <div class="detalle-lista">
+            {% for linea in resultado.detalle %}
+            <p>{{ linea }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="acciones">
+            {% if resultado.tipo == 'exito' %}
+            <a href="/dashprincipal/" class="btn-accion btn-tablero">📈 Ver en el tablero</a>
+            {% endif %}
+
+            {% if resultado.hay_rechazados %}
+            <a href="/descargar_rechazados" class="btn-accion btn-descarga">
+                ⬇️ Descargar registros rechazados (.xlsx)
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulario de cargue -->
+    <div class="card">
+        <h2>📂 Cargue masivo desde Excel</h2>
+        <p>
+            Sube un archivo Excel con los estudiantes a registrar. El sistema calculará
+            automáticamente el promedio y desempeño. Los registros inválidos o duplicados
+            serán rechazados y podrás descargarlos en un archivo Excel con el motivo.
+        </p>
+
+        <form method="POST" action="/carguemasivo" enctype="multipart/form-data">
+            <div class="upload-zone" onclick="document.getElementById('archivo_excel').click()">
+                <label>
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Haz clic para seleccionar el archivo</div>
+                    <div class="upload-hint">Formatos aceptados: .xlsx, .xls</div>
+                    <div id="nombre_archivo"></div>
+                    <input type="file" id="archivo_excel" name="archivo_excel"
+                           accept=".xlsx,.xls" onchange="mostrarNombre(this)">
+                </label>
+            </div>
+            <button type="submit" class="btn-cargar">⬆️ Cargar estudiantes</button>
+        </form>
+    </div>
+
+    <!-- Formato esperado -->
+    <div class="formato-card">
+        <h3>📌 Formato requerido del archivo Excel</h3>
+        <table class="formato">
+            <thead>
+                <tr>
+                    <th>Nombre</th><th>Edad</th><th>Carrera</th>
+                    <th>nota1</th><th>nota2</th><th>nota3</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Juan Pérez</td><td>20</td><td>Ingenieria</td><td>4.0</td><td>3.5</td><td>4.5</td></tr>
+                <tr><td>Laura Gómez</td><td>22</td><td>Matematicas</td><td>5.0</td><td>4.0</td><td>3.0</td></tr>
+                <tr><td>Pedro Ruiz</td><td>19</td><td>Fisica</td><td>2.5</td><td>3.0</td><td>2.0</td></tr>
+            </tbody>
+        </table>
+
+        <div class="reglas">
+            <strong>Reglas de validación:</strong><br>
+            ✅ Todos los campos son obligatorios (Nombre, Edad, Carrera, nota1, nota2, nota3)<br>
+            ✅ Las notas deben estar entre <strong>0.0 y 5.0</strong><br>
+            ✅ La edad debe ser un número <strong>positivo</strong><br>
+            ✅ No se permiten estudiantes duplicados (mismo nombre y carrera)<br>
+            ⬇️ Los registros rechazados se pueden descargar con el motivo de rechazo
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function mostrarNombre(input) {
+        const label = document.getElementById('nombre_archivo');
+        label.textContent = input.files[0] ? '📄 ' + input.files[0].name : '';
+    }
+</script>
+
+</body>
+</html>
